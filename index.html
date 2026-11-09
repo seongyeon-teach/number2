@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>랜덤 번호 뽑기</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Noto Sans KR) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        .card-flip {
+            perspective: 1000px;
+        }
+        /* Custom Animation Effects */
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="w-full bg-slate-800/80 backdrop-blur border-b border-slate-700 py-4 px-6 sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-dice-d20 text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-white tracking-tight">행운의 번호 뽑기</h1>
+                    <p class="text-xs text-slate-400">총 20명 | 매번 새로운 번호 부여</p>
+                </div>
+            </div>
+            
+            <button id="reset-btn" onclick="resetAll()" class="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 border border-slate-600 shadow-sm">
+                <i class="fa-solid fa-rotate-right"></i>
+                <span>처음으로 (번호 재섞기)</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-4xl w-full mx-auto p-4 sm:p-6 flex-grow flex flex-col justify-center">
+
+        <!-- Info Banner -->
+        <div class="bg-indigo-950/40 border border-indigo-800/50 rounded-2xl p-4 mb-6 flex items-center justify-between shadow-inner">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-circle-info text-indigo-400 text-lg"></i>
+                <p class="text-sm text-indigo-200">
+                    자신의 이름을 누르면 새로운 번호가 나타납니다! (모두 완료 시 전체 목록 표시)
+                </p>
+            </div>
+            <div class="text-xs font-semibold px-3 py-1 bg-indigo-900/80 text-indigo-300 rounded-full border border-indigo-700/50">
+                남은 사람: <span id="remaining-count" class="text-white font-bold">20</span>/20명
+            </div>
+        </div>
+
+        <!-- Name Buttons Grid -->
+        <div id="names-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 sm:gap-4">
+            <!-- Buttons will be dynamically inserted here -->
+        </div>
+
+    </main>
+
+    <!-- Modal Dialog for Displaying Single Number -->
+    <div id="number-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl transform scale-95 transition-transform duration-200 relative overflow-hidden" id="modal-card">
+            
+            <!-- Background Decorative Glow -->
+            <div class="absolute -top-12 -left-12 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl"></div>
+            <div class="absolute -bottom-12 -right-12 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl"></div>
+
+            <div class="relative z-10">
+                <div class="w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-user-astronaut text-2xl text-indigo-400"></i>
+                </div>
+                
+                <h3 id="modal-name" class="text-2xl font-bold text-white mb-1">이름</h3>
+                <p class="text-xs text-slate-400 mb-6">학생의 부여받은 번호는?</p>
+
+                <!-- Number Display Box -->
+                <div class="bg-slate-900 border-2 border-indigo-500/50 rounded-2xl py-6 px-4 mb-6 shadow-inner relative overflow-hidden group">
+                    <span class="text-xs text-slate-500 block mb-1 uppercase tracking-widest font-semibold">Your Number</span>
+                    <div id="modal-number" class="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 animate-pop">
+                        ?
+                    </div>
+                </div>
+
+                <button onclick="closeModal()" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-indigo-500/25 transition-all active:scale-95 text-base">
+                    확인했습니다
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final Summary Modal (Shown when all 20 students complete) -->
+    <div id="summary-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-2xl w-full text-center shadow-2xl transform scale-95 transition-transform duration-300 relative overflow-hidden my-auto max-h-[90vh] flex flex-col" id="summary-modal-card">
+            
+            <div class="mb-4">
+                <div class="w-14 h-14 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <i class="fa-solid fa-trophy text-2xl text-emerald-400"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white">🎉 모든 번호 부여 완료!</h2>
+                <p class="text-xs text-slate-400">최종 학생별 무작위 번호 결과표입니다.</p>
+            </div>
+
+            <!-- Scrollable Summary Table -->
+            <div class="overflow-y-auto flex-grow rounded-2xl border border-slate-700 bg-slate-900/60 p-2 sm:p-4 mb-6">
+                <div id="summary-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                    <!-- Sorted result list will be inserted here -->
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeSummaryModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-3 px-4 rounded-xl transition-all active:scale-95 text-sm">
+                    닫기 (화면 보기)
+                </button>
+                <button onclick="closeSummaryModal(); resetAll();" class="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-indigo-500/25 transition-all active:scale-95 text-sm">
+                    새로 다시 뽑기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full text-center py-4 text-xs text-slate-500 border-t border-slate-800/80 mt-6">
+        <p>20인 학생 무작위 번호 생성기</p>
+    </footer>
+
+    <!-- JavaScript Engine -->
+    <script>
+        // 학생 명단 (20명)
+        const students = [
+            "윤재준", "김제니", "이시우", "김준", "강다은",
+            "정동하", "이로하", "남기원", "송다원", "윤지호",
+            "손도현", "이강현", "김래원", "김서연", "권혜솔",
+            "이도윤", "성현수", "조유나", "권이수", "임다봄"
+        ];
+
+        // 상태 변수
+        let assignedNumbers = {}; // { 학생이름: 번호 }
+        let openedStudents = new Set(); // 확인을 완료한 학생 목록
+
+        // Fisher-Yates 셔플 알고리즘으로 1~20 번호 랜덤 배치
+        function generateRandomAssignments() {
+            const numbers = Array.from({ length: 20 }, (_, i) => i + 1);
+            
+            // 배열 무작위 섞기
+            for (let i = numbers.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
+            }
+
+            // 매핑 객체 생성
+            assignedNumbers = {};
+            students.forEach((name, index) => {
+                assignedNumbers[name] = numbers[index];
+            });
+        }
+
+        // 화면 그리드 그리기
+        function renderGrid() {
+            const grid = document.getElementById('names-grid');
+            grid.innerHTML = '';
+
+            students.forEach(name => {
+                const isOpened = openedStudents.has(name);
+                const button = document.createElement('button');
+                
+                button.className = isOpened
+                    ? "bg-slate-800/50 border border-slate-700/60 text-slate-500 rounded-2xl p-4 flex flex-col items-center justify-center cursor-not-allowed opacity-60 transition-all"
+                    : "bg-slate-800 hover:bg-indigo-900/40 border border-slate-700 hover:border-indigo-500/50 text-slate-100 rounded-2xl p-4 flex flex-col items-center justify-center transition-all duration-200 hover:-translate-y-1 shadow-md hover:shadow-indigo-500/10 group active:scale-95";
+
+                button.onclick = () => revealNumber(name);
+
+                button.innerHTML = `
+                    <div class="w-10 h-10 ${isOpened ? 'bg-slate-700/30 text-slate-600' : 'bg-slate-700/60 text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white'} rounded-full flex items-center justify-center mb-2 transition-colors">
+                        <i class="fa-solid ${isOpened ? 'fa-check' : 'fa-user'} text-sm"></i>
+                    </div>
+                    <span class="font-semibold text-base sm:text-lg ${isOpened ? 'line-through text-slate-500' : 'text-slate-200 group-hover:text-white'}">${name}</span>
+                    <span class="text-[11px] ${isOpened ? 'text-indigo-400 font-bold' : 'text-slate-500'} mt-1">
+                        ${isOpened ? `[ ${assignedNumbers[name]}번 ]` : '터치하여 확인'}
+                    </span>
+                `;
+
+                grid.appendChild(button);
+            });
+
+            // 남은 사람 업데이트
+            const remaining = students.length - openedStudents.size;
+            document.getElementById('remaining-count').textContent = remaining;
+        }
+
+        // 번호 확인 팝업 띄우기
+        function revealNumber(name) {
+            openedStudents.add(name);
+            renderGrid();
+
+            const number = assignedNumbers[name];
+            document.getElementById('modal-name').textContent = name;
+            
+            const numberEl = document.getElementById('modal-number');
+            numberEl.textContent = number;
+            
+            // 카운트 애니메이션 효과 
+            numberEl.classList.remove('animate-pop');
+            void numberEl.offsetWidth; // Trigger reflow
+            numberEl.classList.add('animate-pop');
+
+            const modal = document.getElementById('number-modal');
+            const modalCard = document.getElementById('modal-card');
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalCard.classList.remove('scale-95');
+                modalCard.classList.add('scale-100');
+            }, 10);
+        }
+
+        // 개별 번호 모달 닫기 (모두 완료 시 최종 전체 결과창 오픈)
+        function closeModal() {
+            const modal = document.getElementById('number-modal');
+            const modalCard = document.getElementById('modal-card');
+
+            modal.classList.add('opacity-0');
+            modalCard.classList.remove('scale-100');
+            modalCard.classList.add('scale-95');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                
+                // 20명 모두 확인했는지 검사
+                if (openedStudents.size === students.length) {
+                    showFinalSummary();
+                }
+            }, 200);
+        }
+
+        // 최종 전체 정리 화면 띄우기 (번호 순 정렬)
+        function showFinalSummary() {
+            const summaryGrid = document.getElementById('summary-grid');
+            summaryGrid.innerHTML = '';
+
+            // 번호 오름차순(1번~20번)으로 정렬하여 표시
+            const sortedList = students
+                .map(name => ({ name, num: assignedNumbers[name] }))
+                .sort((a, b) => a.num - b.num);
+
+            sortedList.forEach(item => {
+                const cell = document.createElement('div');
+                cell.className = "bg-slate-800/90 border border-slate-700/80 rounded-xl p-3 flex items-center space-x-3";
+                cell.innerHTML = `
+                    <span class="w-8 h-8 rounded-lg bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 font-bold flex items-center justify-center text-sm shrink-0">
+                        ${item.num}
+                    </span>
+                    <span class="font-medium text-slate-200 text-sm truncate">${item.name}</span>
+                `;
+                summaryGrid.appendChild(cell);
+            });
+
+            const summaryModal = document.getElementById('summary-modal');
+            const summaryCard = document.getElementById('summary-modal-card');
+
+            summaryModal.classList.remove('hidden');
+            setTimeout(() => {
+                summaryModal.classList.remove('opacity-0');
+                summaryCard.classList.remove('scale-95');
+                summaryCard.classList.add('scale-100');
+            }, 10);
+        }
+
+        // 최종 정리 모달 닫기
+        function closeSummaryModal() {
+            const summaryModal = document.getElementById('summary-modal');
+            const summaryCard = document.getElementById('summary-modal-card');
+
+            summaryModal.classList.add('opacity-0');
+            summaryCard.classList.remove('scale-100');
+            summaryCard.classList.add('scale-95');
+
+            setTimeout(() => {
+                summaryModal.classList.add('hidden');
+            }, 300);
+        }
+
+        // 처음으로 돌아가기 (번호 완전히 다시 섞기)
+        function resetAll() {
+            openedStudents.clear();
+            generateRandomAssignments();
+            renderGrid();
+        }
+
+        // 초기 시작
+        window.onload = function() {
+            generateRandomAssignments();
+            renderGrid();
+        };
+    </script>
+</body>
+</html>
